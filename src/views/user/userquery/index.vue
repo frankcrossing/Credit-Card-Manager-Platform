@@ -1,0 +1,180 @@
+<template>
+  <div class="app-container">
+    <div class="filter-container">
+      <el-form ref="form" :inline="true" label-width="90px">
+        <el-form-item label="注册日期：">
+          <el-date-picker
+            v-model="dateRange"
+            size="small"
+            type="daterange"
+            :picker-options="pickerOptions"
+            style="width: 255px;"
+          />
+          <el-button size="small" type="success" plain icon="el-icon-search" @click="getList">搜索</el-button>
+        </el-form-item>
+      </el-form>
+    </div>
+
+    <el-table
+      :key="tableKey"
+      :data="list"
+      border
+      fit
+      highlight-current-row
+      size="small"
+      style="width: 100%;"
+    >
+      <el-table-column type="index" label="序号" align="center" width="80">
+        <template scope="scope">
+          <span>{{ (listQuery.pageNum - 1) * listQuery.pageSize + scope.$index + 1 }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="手机号" width="150px" align="center">
+        <template slot-scope="scope">
+          <span>{{ scope.row.mobile }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="姓名" align="center" width="80">
+        <template slot-scope="scope">
+          <span>{{ scope.row.name }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="是否实名" width="130px" align="center">
+        <template slot-scope="scope">
+          <span :style="'color:'+(scope.row.realNameAuth=='已实名'?'#96E180':scope.row.realNameAuth=='未实名'?'#FF0000':'')+';'">{{ scope.row.realNameAuth }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="是否绑卡" width="110px" align="center">
+        <template slot-scope="scope">
+          <span :style="'color:'+(scope.row.bindCard=='已绑卡'?'#96E180':scope.row.bindCard=='未绑卡'?'#FF0000':'')+';'">{{ scope.row.bindCard }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="计划数" width="180px" align="center">
+        <template slot-scope="scope">
+          <span>{{ scope.row.planNum }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="会员等级" width="110px" align="center">
+        <template slot-scope="scope">
+          <span>{{ scope.row.memberLevel }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="注册时间" width="150px" align="center">
+        <template slot-scope="scope">
+          <span>{{ scope.row.registerTime }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="操作" align="center" width="150" class-name="small-padding fixed-width">
+        <template slot-scope="{row}">
+          <el-button type="primary" size="mini" @click="showDetailInfo(row)">
+            详情
+          </el-button>
+        </template>
+      </el-table-column>
+    </el-table>
+    <pagination v-show="total>0" :total="total" :page.sync="listQuery.pageNum" :limit.sync="listQuery.pageSize" @pagination="getList" />
+  </div>
+</template>
+
+<script>
+import { mapGetters } from 'vuex'
+import { pagedUserInfo } from '@/api/user'
+import { parseTime } from '@/utils'
+import Pagination from '@/components/Pagination'
+
+export default {
+  name: 'Userquery',
+  components: { Pagination },
+  data() {
+    return {
+      tableKey: 0,
+      list: null,
+      total: 0,
+      listQuery: {
+        pageNum: 1,
+        pageSize: 20,
+        condition: {
+          manageuserId: 0,
+          registerBeginDate: '',
+          registerEndDate: ''
+        }
+      },
+      pickerOptions: {
+        shortcuts: [{
+          text: '最近一周',
+          onClick(picker) {
+            const end = new Date()
+            const start = new Date()
+            start.setTime(start.getTime() - 3600 * 1000 * 24 * 7)
+            picker.$emit('pick', [start, end])
+          }
+        }, {
+          text: '最近一个月',
+          onClick(picker) {
+            const end = new Date()
+            const start = new Date()
+            start.setTime(start.getTime() - 3600 * 1000 * 24 * 30)
+            picker.$emit('pick', [start, end])
+          }
+        }, {
+          text: '最近三个月',
+          onClick(picker) {
+            const end = new Date()
+            const start = new Date()
+            start.setTime(start.getTime() - 3600 * 1000 * 24 * 90)
+            picker.$emit('pick', [start, end])
+          }
+        }]
+      },
+      dateRange: []
+    }
+  },
+  computed: {
+    ...mapGetters([
+      'managerId'
+    ])
+  },
+  created() {
+    this.initData()
+    this.getList()
+  },
+  methods: {
+    initData() {
+      var now = new Date()
+      this.dateRange[0] = now
+      this.dateRange[1] = now
+    },
+    getList() {
+      console.log('getList')
+      this.listQuery.condition.manageuserId = this.managerId
+      this.listQuery.condition.registerBeginDate = parseTime(this.dateRange[0], '{y}{m}{d}')
+      var endDate = new Date(this.dateRange[1])
+      var tomorrow = new Date(endDate.setDate(endDate.getDate() + 1))
+      this.listQuery.condition.registerEndDate = parseTime(tomorrow, '{y}{m}{d}')
+      pagedUserInfo(this.listQuery).then(response => {
+        if (response.data != null) {
+          this.list = response.data.list
+          this.total = response.data.total
+        }
+      })
+    },
+    showDetailInfo(row) {
+      const temp = Object.assign({}, row)
+      const userId = temp.userId
+      this.$router.push({
+        name: 'Detailinfo',
+        params: {
+          userId: userId
+        }
+      })
+    }
+  }
+}
+</script>
+</script>
+<style lang="scss">
+.el-col1{
+  line-height:40px;
+  height: 40px;
+}
+</style>

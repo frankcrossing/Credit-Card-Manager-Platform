@@ -1,0 +1,381 @@
+<template>
+  <div class="app-container">
+    <div class="filter-container">
+      <el-form ref="form" label-width="90px">
+        <el-row>
+          <el-col :span="2" class="el-col-agt">
+            <el-button type="primary" icon="el-icon-plus" size="medium" @click="showAddForm()">新增</el-button>
+          </el-col>
+          <el-col :span="2" class="el-col-agt">
+            <el-checkbox v-model="listQuery.condition.showAll" @change="reloadList()">显示关闭的代理人</el-checkbox>
+          </el-col>
+        </el-row>
+      </el-form>
+    </div>
+
+    <el-table
+      :key="tableKey"
+      :data="list"
+      border
+      fit
+      highlight-current-row
+      size="small"
+      style="width: 100%;"
+    >
+      <!--<el-table-column type="selection" width="55" />-->
+      <el-table-column type="index" label="序号" align="center" width="80">
+        <template scope="scope">
+          <span>{{ (listQuery.pageNum - 1) * listQuery.pageSize + scope.$index + 1 }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="代理人代号" width="100px" align="center">
+        <template slot-scope="scope">
+          <span>{{ scope.row.agentId }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="代理人" width="100px" align="center">
+        <template slot-scope="scope">
+          <span>{{ scope.row.agentName }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="状态" width="60px" align="center">
+        <template slot-scope="scope">
+          <span :style="'color:'+(scope.row.status.desc=='正常'?'#96E180':'#FF0000')+';'">{{ scope.row.status.desc }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="分润模式" width="100px" align="center">
+        <template slot-scope="scope">
+          <span>{{ scope.row.shareProfitMode.desc }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="分润比例" width="100px" align="center">
+        <template slot-scope="scope">
+          <span>{{ scope.row.shareProfitRate }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="添加日期" width="150px" align="center">
+        <template slot-scope="scope">
+          <span>{{ scope.row.addTime }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="链接" width="250px" align="center">
+        <template slot-scope="scope">
+          <span>{{ scope.row.linkurl }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="操作" align="center" width="150" class-name="small-padding fixed-width">
+        <template slot-scope="{row}">
+          <el-button type="primary" size="mini" @click="showUpdateForm(row)">
+            修改
+          </el-button>
+          <el-button type="primary" size="mini" @click="showDetailInfo(row)">
+            查看
+          </el-button>
+        </template>
+      </el-table-column>
+    </el-table>
+    <pagination v-show="total>0" :total="total" :page.sync="listQuery.pageNum" :limit.sync="listQuery.pageSize" @pagination="getList" />
+
+    <el-dialog
+      title="修改代理人"
+      :visible.sync="dialogVisible1"
+      width="30%"
+      center
+    >
+      <el-form ref="updateForm" :model="updateForm" :rules="rules" label-width="110px">
+        <el-form-item label="代理人代号：">
+          <span>{{ updateForm.agentId }}</span>
+        </el-form-item>
+        <el-form-item label="代理人名称：">
+          <span>{{ updateForm.agentName }}</span>
+        </el-form-item>
+        <el-form-item label="分润模式：" prop="shareProfitMode">
+          <el-select v-model="updateForm.shareProfitMode" style="width: 117px;" size="small">
+            <el-option
+              v-for="item in shareProfitModeOptions"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="分润比例：" prop="shareProfitRate">
+          <el-input v-model="updateForm.shareProfitRate" size="small" style="width: 115px;" /><span> % </span>
+        </el-form-item>
+        <el-form-item label="状态：" prop="stat">
+          <el-select v-model="updateForm.stat"  style="width: 117px;" size="small">
+            <el-option
+              v-for="item in statOptions"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="添加日期：">
+          <span>{{ updateForm.addTime }}</span>
+        </el-form-item>
+      </el-form>
+      <span slot="footer" class="dialog-footer">
+        <el-button type="primary" size="medium" @click="agentUpdate">保 存</el-button>
+      </span>
+    </el-dialog>
+
+    <el-dialog
+      title="查看代理人"
+      :visible.sync="dialogVisible2"
+      width="30%"
+      center
+    >
+      <el-form ref="showForm" :model="showForm" label-width="110px">
+        <el-form-item label="代理人代号：">
+          <span>{{ showForm.agentId }}</span>
+        </el-form-item>
+        <el-form-item label="代理人名称：">
+          <span>{{ showForm.agentName }}</span>
+        </el-form-item>
+        <el-form-item label="分润模式：">
+          <span>{{ showForm.shareProfitMode }}</span>
+        </el-form-item>
+        <el-form-item label="分润比例：">
+          <span>{{ showForm.shareProfitRate }}</span>
+        </el-form-item>
+        <el-form-item label="状态：">
+          <span>{{ showForm.stat }}</span>
+        </el-form-item>
+        <el-form-item label="渠道链接：">
+          <span>{{ showForm.linkurl }}</span>
+        </el-form-item>
+        <el-form-item label="添加日期：">
+          <span>{{ showForm.addTime }}</span>
+        </el-form-item>
+      </el-form>
+      <span slot="footer" class="dialog-footer">
+        <el-button type="primary" @click="dialogVisible2 = false">关 闭</el-button>
+      </span>
+    </el-dialog>
+
+    <el-dialog
+      title="新增代理人"
+      :visible.sync="dialogVisible3"
+      width="30%"
+      center
+    >
+      <el-form ref="addForm" :model="addForm" :rules="rules" label-width="110px">
+        <el-form-item label="代理人代号：" prop="agentId">
+          <el-input v-model="addForm.agentId" size="small" style="width: 115px;" />
+        </el-form-item>
+        <el-form-item label="代理人名称：" prop="agentName">
+          <el-input v-model="addForm.agentName" size="small" style="width: 115px;" />
+        </el-form-item>
+        <el-form-item label="分润模式：" prop="shareProfitMode">
+          <el-select v-model="addForm.shareProfitMode"  style="width: 117px;" size="small">
+            <el-option
+              v-for="item in shareProfitModeOptions"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="分润比例：" prop="shareProfitRate">
+          <el-input v-model="addForm.shareProfitRate" size="small" style="width: 115px;" /><span> % </span>
+        </el-form-item>
+        <el-form-item label="状态：" prop="stat">
+          <el-select v-model="addForm.stat" style="width: 117px;" size="small">
+            <el-option
+              v-for="item in statOptions"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+            />
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <span slot="footer" class="dialog-footer">
+        <el-button type="primary" size="medium" @click="agentAdd">新 增</el-button>
+      </span>
+    </el-dialog>
+  </div>
+</template>
+
+<script>
+import { mapGetters } from 'vuex'
+import { pagedAgentInfo, saveAgent } from '@/api/agent'
+import Pagination from '@/components/Pagination'
+
+export default {
+  name: 'Agentmanage',
+  components: { Pagination },
+  data() {
+    return {
+      dialogVisible1: false,
+      dialogVisible2: false,
+      dialogVisible3: false,
+      statOptions: [{ value: '0', label: '关闭' }, { value: '1', label: '正常' }],
+      shareProfitModeOptions: [{ value: '0', label: '线下' }, { value: '1', label: '线上' }],
+      updateForm: {
+        id: 0,
+        agentId: '',
+        agentName: '',
+        shareProfitMode: '',
+        shareProfitRate: '',
+        stat: '',
+        addTime: ''
+      },
+      showForm: {
+        agentId: '',
+        agentName: '',
+        shareProfitMode: '',
+        shareProfitRate: '',
+        stat: '',
+        linkurl: '',
+        addTime: ''
+      },
+      addForm: {
+        agentId: '',
+        agentName: '',
+        shareProfitMode: '1',
+        shareProfitRate: '',
+        stat: '1'
+      },
+      tableKey: 0,
+      list: null,
+      total: 0,
+      listQuery: {
+        pageNum: 1,
+        pageSize: 20,
+        condition: {
+          manageuserId: 0,
+          showAll: true
+        }
+      },
+      rules: {
+        agentId: [
+          { required: true, message: '请填写代理人ID', trigger: 'blur' },
+          { min: 1, max: 20, message: '长度在 1 到 20 个字符' }
+        ],
+        agentName: [
+          { required: true, message: '请填写代理人名称', trigger: 'blur' },
+          { min: 1, max: 50, message: '长度在 1 到 50 个字符' }
+        ],
+        shareProfitRate: [
+          {
+            required: true,
+            pattern: /^\d\.([1-9]{1,2}|[0-9][1-9])$|^[1-9]\d{0,1}(\.\d{1,2}){0,1}$|^100(\.0{1,2}){0,1}$/,
+            message: '请正确填写分润比例(大于0,小于100,可包含两位小数)',
+            trigger: 'blur'
+          }
+        ],
+        stat: [
+          { required: true }
+        ],
+        shareProfitMode: [
+          { required: true }
+        ],
+      }
+    }
+  },
+  computed: {
+    ...mapGetters([
+      'managerId'
+    ])
+  },
+  created() {
+    this.reloadList()
+  },
+  methods: {
+    initData() {
+      Object.assign(this.$data, this.$options.data())
+    },
+    reloadList() {
+      Object.assign(this.$data.listQuery.pageNum, this.$options.data().listQuery.pageNum)
+      this.getList()
+    },
+    getList() {
+      this.listQuery.condition.manageuserId = this.managerId
+      pagedAgentInfo(this.listQuery).then(response => {
+        if (response.data != null) {
+          this.list = response.data.list
+          this.total = response.data.total
+        }else {
+          this.list = null
+          this.total = 0
+        }
+      })
+    },
+    showAddForm() {
+      Object.assign(this.$data.addForm, this.$options.data().addForm)
+      this.dialogVisible3 = true
+    },
+    agentAdd() {
+      this.$refs.addForm.validate(valid => {
+        if (valid) {
+          saveAgent(this.addForm).then(response => {
+            if(response.code === 20000){
+              this.$message({
+                message: '新代理商添加成功',
+                type: 'success'
+              });
+              this.dialogVisible3 = false
+              this.getList()
+            }
+          })
+        } else {
+          this.$message.error('信息输入有误，请核对:(');
+          return false
+        }
+      })
+    },
+    agentUpdate() {
+      this.$refs.updateForm.validate(valid => {
+        if (valid) {
+          saveAgent(this.updateForm).then(response => {
+            if(response.code === 20000){
+              this.$message({
+                message: '信息已更新',
+                type: 'success'
+              });
+              this.dialogVisible1 = false
+              this.getList()
+            }
+          })
+        } else {
+          this.$message.error('信息输入有误，请核对:(');
+          return false
+        }
+      })
+    },
+    showUpdateForm(row) {
+      Object.assign(this.$data.updateForm, this.$options.data().updateForm)
+      let {id, agentId, agentName, shareProfitMode, shareProfitRate, status, linkurl, addTime} = row
+      this.updateForm.id = id
+      this.updateForm.agentId = agentId
+      this.updateForm.agentName = agentName
+      this.updateForm.shareProfitMode = shareProfitMode.code
+      this.updateForm.shareProfitRate = shareProfitRate.substr(0, shareProfitRate.length-1)
+      this.updateForm.stat = status.code
+      this.updateForm.addTime = addTime
+      this.dialogVisible1 = true
+    },
+    showDetailInfo(row) {
+      Object.assign(this.$data.showForm, this.$options.data().showForm)
+      let {id, agentId, agentName, shareProfitMode, shareProfitRate, status, linkurl, addTime} = row
+      this.showForm.agentId = agentId
+      this.showForm.agentName = agentName
+      this.showForm.shareProfitMode = shareProfitMode.desc
+      this.showForm.shareProfitRate = shareProfitRate
+      this.showForm.stat = status.desc
+      this.showForm.linkurl = linkurl
+      this.showForm.addTime = addTime
+      this.dialogVisible2 = true
+    }
+  }
+}
+</script>
+<style lang="scss">
+.el-col-agt{
+  line-height:40px;
+  height: 40px;
+}
+</style>

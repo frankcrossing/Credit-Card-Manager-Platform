@@ -1,0 +1,164 @@
+<template>
+  <div>
+    <el-collapse v-model="activeNames" @change="handleChange">
+      <el-collapse-item title="基本信息" name="1">
+        <div class="div1">
+          <el-row v-for="(row,index) in userBaseinfos" :key="index" class="el-row2">
+            <el-col v-for="(item,index2) in row.items" :key="index2" :span="6">
+              <el-row class="el-row1">
+                <el-col :span="8" class="el-col1">
+                  <span class="left-span">{{ item.label }}</span>
+                </el-col>
+                <el-col :span="10" class="el-col2">
+                  <span class="right-span" :style="'color:'+(item.value=='已认证'?'#96E180':item.value=='未认证'?'#FF0000':'') + ';'">{{ item.value }}</span>
+                </el-col>
+              </el-row>
+            </el-col>
+          </el-row>
+        </div>
+      </el-collapse-item>
+      <el-collapse-item title="绑定信息" name="2">
+        <el-form>
+          <el-row>
+            <el-col :span="6">
+              <el-row>
+                <el-col>
+                  <el-form-item label="是否实名：">
+                    <span :style="'color:'+(userBindinfo.realNameAuth=='已实名'?'#96E180':userBindinfo.realNameAuth=='未实名'?'#FF0000':'') + ';'">{{ userBindinfo.realNameAuth }}</span>
+                  </el-form-item>
+                </el-col>
+              </el-row>
+              <el-row>
+                <el-col>
+                  <el-form-item label="是否绑卡：">
+                    <span :style="'color:'+(userBindinfo.bindCard=='已绑卡'?'#96E180':userBindinfo.bindCard=='未绑卡'?'#FF0000':'') + ';'">{{ userBindinfo.bindCard }}</span>
+                  </el-form-item>
+                </el-col>
+              </el-row>
+            </el-col>
+            <el-col :span="6">
+              <el-form-item label="认证状态：">
+                <span :style="'color:'+(userBindinfo.certificateStatus=='识别成功'?'#96E180':'#FF0000') + ';'">{{ userBindinfo.certificateStatus }}</span>
+              </el-form-item>
+            </el-col>
+          </el-row>
+          <el-row>
+            <el-table
+              :key="tableKey"
+              :data="userBindinfo.bindCardInfos"
+              border
+              fit
+              highlight-current-row
+              size="small"
+              style="width: 100%;"
+            >
+              <el-table-column type="index" label="序号" prop="index" sortable="custom" align="center" width="80" />
+              <el-table-column label="卡号" width="150px" align="center">
+                <template slot-scope="scope">
+                  <span>{{ scope.row.cardNum }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="银行" align="center" width="200">
+                <template slot-scope="scope">
+                  <span>{{ scope.row.bankName }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="计划数" align="center" width="100">
+                <template slot-scope="scope">
+                  <span>{{ scope.row.planNum }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="绑卡状态" align="center" width="80">
+                <template slot-scope="scope">
+                  <span :style="'color:'+(scope.row.bindStatus=='成功'?'#96E180':'#FF0000') + ';'">{{ scope.row.bindStatus }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="绑定日期" align="center" width="160">
+                <template slot-scope="scope">
+                  <span>{{ scope.row.bindTime }}</span>
+                </template>
+              </el-table-column>
+            </el-table>
+          </el-row>
+        </el-form>
+      </el-collapse-item>
+    </el-collapse>
+  </div>
+</template>
+<script>
+import { userBaseInfoReport } from '@/api/user'
+import { userBindInfo } from '@/api/user'
+export default {
+  name: 'Userinfo',
+  props: ['userId'],
+  data() {
+    return {
+      activeNames: ['1', '2'],
+      userBaseinfos: [],
+      userBindinfo: {
+        realNameAuth: '',
+        bindCard: '',
+        certificateStatus: '',
+        bindCardInfos: []
+      },
+      tableKey: 0
+    }
+  },
+  mounted() {
+    const userId = this.userId
+    if (userId !== undefined) {
+      this.loadUserBaseinfos(userId)
+      this.loadUserBindinfos(userId)
+    }
+  },
+  methods: {
+    handleChange(val) {
+      console.log(val)
+    },
+    loadUserBaseinfos(userId) {
+      userBaseInfoReport(userId).then(response => {
+        this.userBaseinfos = response.data
+      })
+    },
+    loadUserBindinfos(userId) {
+      userBindInfo(userId).then(response => {
+        this.userBindinfo = response.data
+      })
+    }
+  }
+}
+</script>
+<style lang="scss">
+.el-row1{
+  border-left: 2px solid black;
+  height: 42px;
+}
+.el-row2{
+  border-top: 2px solid black;
+  border-right: 2px solid black;
+}
+.el-col1{
+  border-right: 2px solid black;
+  line-height:42px;
+  height: 42px;
+  background: #E8FBFA;
+  text-align: right;
+}
+.el-col2{
+  line-height:42px;
+  height: 42px;
+}
+.left-span{
+  margin-right: 10px;
+}
+.right-span{
+  margin-left: 10px;
+}
+.div1{
+  width: 1398px;
+  border-bottom: 2px solid black;
+}
+.el-collapse-item__header{
+  background-color: #E5E5E5;
+}
+</style>
